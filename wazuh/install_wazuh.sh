@@ -63,3 +63,46 @@ docker-compose --version
 
 # Output:
 Docker Compose version v2.12.2
+
+# Wazuh Docker deployment
+# Single-node deployment: Deploys one Wazuh manager, indexer, and dashboard node.
+
+# Clone the Wazuh repository to your system:
+
+git clone https://github.com/wazuh/wazuh-docker.git -b v4.5.3
+
+# Then enter into the single-node directory to execute all the commands described below within this directory.
+
+# Provide a group of certificates for each node in the stack to secure communication between the nodes. You have two alternatives to provide these certificates:
+
+# Generate self-signed certificates for each cluster node.
+
+# We have created a Docker image to automate certificate generation using the Wazuh certs gen tool.
+
+# If your system uses a proxy, add the following to the generate-indexer-certs.yml file. If not, skip this particular step:
+
+ environment:
+  - HTTP_PROXY=YOUR_PROXY_ADDRESS_OR_DNS
+
+# A completed example looks like:
+
+# # Wazuh App Copyright (C) 2021 Wazuh Inc. (License GPLv2)
+ version: '3'
+
+ services:
+   generator:
+     image: wazuh/wazuh-certs-generator:0.0.1
+     hostname: wazuh-certs-generator
+     volumes:
+       - ./config/wazuh_indexer_ssl_certs/:/certificates/
+       - ./config/certs.yml:/config/certs.yml
+     environment:
+       - HTTP_PROXY=YOUR_PROXY_ADDRESS_OR_DNS
+
+# Execute the following command to get the desired certificates:
+
+ docker-compose -f generate-indexer-certs.yml run --rm generator
+
+# This saves the certificates into the config/wazuh_indexer_ssl_certs directory.
+
+
