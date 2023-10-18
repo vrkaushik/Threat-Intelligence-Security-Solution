@@ -116,3 +116,11 @@ docker-compose up
 docker-compose up -d
 
 #The default username and password for the Wazuh dashboard are admin and SecretPassword. For additional security, you can change the default password for the Wazuh indexer admin user.
+
+1514 - Wazuh TCP
+1515
+Wazuh TCP - 514
+Wazuh UDP - 55000
+Wazuh API - 9200
+Wazuh indexer HTTPS - 443
+Wazuh dashboard HTTPS
