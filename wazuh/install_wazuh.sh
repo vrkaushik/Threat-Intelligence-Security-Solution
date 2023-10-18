@@ -105,4 +105,14 @@ git clone https://github.com/wazuh/wazuh-docker.git -b v4.5.3
 
 # This saves the certificates into the config/wazuh_indexer_ssl_certs directory.
 
+#3. Start the Wazuh single-node deployment using docker-compose:
 
+#Foreground:
+
+docker-compose up
+
+#Background:
+
+docker-compose up -d
+
+#The default username and password for the Wazuh dashboard are admin and SecretPassword. For additional security, you can change the default password for the Wazuh indexer admin user.
