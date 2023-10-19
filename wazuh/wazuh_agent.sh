@@ -28,7 +28,23 @@ apt-get update
 
 # To deploy the Wazuh agent on your endpoint, select your package manager and edit the WAZUH_MANAGER variable to contain your Wazuh manager IP address or hostname.
 
-WAZUH_MANAGER="10.0.0.2" apt-get install wazuh-agent
+WAZUH_MANAGER="10.128.0.4" apt-get install wazuh-agent
+
+#OR
+
+#Edit the agent configuration file /var/ossec/etc/ossec.conf
+
+nano /var/ossec/etc/ossec.conf
+
+#Include the Wazuh manager IP address or DNS name in the <client><server><address> section
+<ossec_config>
+  <client>
+    <server>
+      <address>10.128.0.4</address>
+      <port>1514</port>
+      <protocol>tcp</protocol>
+    </server>
+  </client>
 
 # Enable and start the Wazuh agent service.
 
