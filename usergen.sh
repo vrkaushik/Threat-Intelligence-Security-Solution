@@ -35,7 +35,7 @@ do
     if sudo grep -q "$USER" /etc/sudoers; then
         echo "User $USER is already in sudoers file. Skipping."
     else
-        echo "$USER ALL=(ALL:ALL) ALL" | sudo tee -a /etc/sudoers
+        echo "$USER ALL=(ALL:ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
         echo "User $USER added to sudoers file."
     fi
     
