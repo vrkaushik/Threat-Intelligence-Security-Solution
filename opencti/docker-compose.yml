@@ -1,12 +1,14 @@
 version: '3'
 services:
   redis:
-    image: redis:7.2.1
+    image: redis:7.2.2
     restart: always
     volumes:
       - redisdata:/data
+    environment:
+      - REDIS__CA=/etc/ssl/CA/cacert.pem
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
     volumes:
       - esdata:/usr/share/elasticsearch/data
     environment:
@@ -17,6 +19,8 @@ services:
       - xpack.ml.enabled=false
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms${ELASTIC_MEMORY_SIZE} -Xmx${ELASTIC_MEMORY_SIZE}"
+      - ELASTICSEARCH__SSL__REJECT_UNAUTHORIZED=false
+      - ELASTICSEARCH__SSL__CA=/etc/ssl/CA/cacert.pem
     restart: always
     ulimits:
       memlock:
@@ -33,7 +37,7 @@ services:
       - "9000:9000"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}    
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -47,11 +51,16 @@ services:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
       - RABBITMQ_NODENAME=rabbit01@localhost
+      - RABBITMQ__USE_SSL=true
+      - RABBITMQ__USE_SSL_CERT=/etc/ssl/CA/rabbitMQ.crt
+      - RABBITMQ__USE_SSL_KEY=/etc/ssl/CA/rabbitMQ.key
+      - RABBITMQ__USE_SSL_CA=/etc/ssl/CA/cacert.pem
+      - RABBITMQ__SSL_REJECT_UNAUTHORIZED=false
     volumes:
       - amqpdata:/var/lib/rabbitmq
     restart: always
   opencti:
-    image: opencti/platform:5.11.1
+    image: opencti/platform:5.11.12
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
@@ -76,7 +85,24 @@ services:
       - RABBITMQ__PASSWORD=${RABBITMQ_DEFAULT_PASS}
       - SMTP__HOSTNAME=${SMTP_HOSTNAME}
       - SMTP__PORT=25
+      - PROVIDERS__GITHUB__IDENTIFIER=github
+      - PROVIDERS__GITHUB__STRATEGY=GithubStrategy
+      - PROVIDERS__GITHUB__CONFIG__CLIENT_ID=${PROVIDERS__GITHUB__CONFIG__CLIENT_ID}
+      - PROVIDERS__GITHUB__CONFIG__CLIENT_SECRET=${PROVIDERS__GITHUB__CONFIG__CLIENT_SECRET}
+      - PROVIDERS__GITHUB__CONFIG__CALLBACK_URL=${PROVIDERS__GITHUB__CONFIG__CALLBACK_URL}
+        #- PROVIDERS__GITHUB__CONFIG__LOGOUT_REMOTE=false
       - PROVIDERS__LOCAL__STRATEGY=LocalStrategy
+      - PROVIDERS__LOCAL__CONFIG__DISABLED=true
+      #- APP__HTTPS_CERT__CA=/root/temp/rootCA.crt
+      #- APP__HTTPS_CERT__KEY=/root/temp/opencti.key
+      #- APP__HTTPS_CERT__CRT=/root/temp/opencti.crt
+      #- APP__HTTPS_CERT__CA=/etc/ssl/CA/cacert.pem
+      #- APP__HTTPS_CERT__KEY=/etc/ssl/private/localhost.key
+      #- APP__HTTPS_CERT__CRT=/etc/ssl/certs/localhost.crt
+      #- APP__HTTPS_CERT__KEY="/etc/ssl/CA/platform.key"
+      #- APP__HTTPS_CERT__CRT=/etc/ssl/CA/platform.crt
+      #- APP__HTTPS_CERT__CRT=/etc/ssl/CA/platform.crt
+      #- APP__HTTPS_CERT__REJECT_UNAUTHORIZED=false
     ports:
       - "8080:8080"
     depends_on:
@@ -86,11 +112,14 @@ services:
       - rabbitmq
     restart: always
   worker:
-    image: opencti/worker:5.11.1
+    image: opencti/worker:5.11.12
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - WORKER_LOG_LEVEL=info
+      - MQ_USE_SSL_CA=/etc/ssl/CA/cacert.pem
+      - MQ_USE_SSL_CERT=/etc/ssl/CA/worker1.crt
+      - MQ_USE_SSL_KEY=/etc/ssl/CA/worker1.key
     depends_on:
       - opencti
     deploy:
@@ -98,7 +127,7 @@ services:
       replicas: 3
     restart: always
   connector-export-file-stix:
-    image: opencti/connector-export-file-stix:5.11.1
+    image: opencti/connector-export-file-stix:5.11.12
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -112,7 +141,7 @@ services:
     depends_on:
       - opencti
   connector-export-file-csv:
-    image: opencti/connector-export-file-csv:5.11.1
+    image: opencti/connector-export-file-csv:5.11.12
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -126,7 +155,7 @@ services:
     depends_on:
       - opencti
   connector-export-file-txt:
-    image: opencti/connector-export-file-txt:5.11.1
+    image: opencti/connector-export-file-txt:5.11.12
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -140,7 +169,7 @@ services:
     depends_on:
       - opencti
   connector-import-file-stix:
-    image: opencti/connector-import-file-stix:5.11.1
+    image: opencti/connector-import-file-stix:5.11.12
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -156,7 +185,7 @@ services:
     depends_on:
       - opencti
   connector-import-document:
-    image: opencti/connector-import-document:5.11.1
+    image: opencti/connector-import-document:5.11.12
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
