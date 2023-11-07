@@ -1,10 +1,11 @@
 # Specify the provider and authentication details
 provider "google" {
-  credentials = file("<PATH_TO_YOUR_GCP_SERVICE_ACCOUNT_KEY_FILE>")
+  credentials = file("gcp-cred2.json")
+  project = "capstone-stuxnet-2"
 }
 
 ######################################--------OpenCTI VPC--------######################################
-resource "google_compute_network" "vpc_network" {
+resource "google_compute_network" "opencti-vpc" {
   name                    = "opencti-vpc"
   auto_create_subnetworks = true
 }
@@ -18,9 +19,9 @@ resource "google_compute_network" "vpc_network" {
 # }
 
 # Firewall Rules for OpenCTI 
-resource "google_compute_firewall" "opencti_allow_wazuh" {
-    name = "opencti_allow_wazuh"
-    network = "opencti-vpc"
+resource "google_compute_firewall" "opencti-allow-wazuh" {
+    name = "opencti-allow-wazuh"
+    network = google_compute_network.opencti-vpc.name
 
     allow {
         protocol =  "tcp"
@@ -29,12 +30,12 @@ resource "google_compute_firewall" "opencti_allow_wazuh" {
 
     #source_ranges = [google_compute_instance.wazuh.network_interface.0.network_ip]  
     source_tags = ["wazuh"]
-    target_tags = ["opencti"]
+    target_tags = ["opencti"] 
 }
 
-resource "google_compute_firewall" "opencti_allow_ssh" {
-  name = "opencti_allow_ssh"
-  network = "opencti-vpc"
+resource "google_compute_firewall" "opencti-allow-ssh" {
+  name = "opencti-allow-ssh"
+  network = google_compute_network.opencti-vpc.name
   
   allow {
     protocol = "tcp"
@@ -45,9 +46,9 @@ resource "google_compute_firewall" "opencti_allow_ssh" {
   target_tags = ["opencti"]
 }
 
-resource "google_compute_firewall" "opencti_allow_http" {
-  name = "opencti_allow_ssh"
-  network = "opencti-vpc"
+resource "google_compute_firewall" "opencti-allow-http" {
+  name = "opencti-allow-http"
+  network = google_compute_network.opencti-vpc.name
   
   allow {
     protocol = "tcp"
@@ -59,9 +60,9 @@ resource "google_compute_firewall" "opencti_allow_http" {
   target_tags = ["opencti"]
 }
 
-resource "google_compute_firewall" "opencti_allow_es" {
-  name = "opencti_allow_es"
-  network = "opencti-vpc"
+resource "google_compute_firewall" "opencti-allow-es" {
+  name = "opencti-allow-es"
+  network = google_compute_network.opencti-vpc.name
   
   allow {
     protocol = "tcp"
@@ -85,7 +86,7 @@ resource "google_compute_address" "opencti_static_ip" {
 
 # Create a GCP instance within the specified subnet and with the reserved static IP
 # OpenCTI instance
-resource "google_compute_instance" "vm_instance" {
+resource "google_compute_instance" "opencti-instance" {
   name         = "opencti-instance"
   machine_type = "e2-highmem-4"
   zone         = var.zone
@@ -97,8 +98,8 @@ resource "google_compute_instance" "vm_instance" {
     }
   }
   network_interface {
-    network = google_compute_network.vpc_network.self_link
-    subnetwork = google_compute_subnetwork.subnet.self_link
+    network = google_compute_network.opencti-vpc.self_link
+    # subnetwork = google_compute_subnetwork.subnet.self_link
     access_config {
       nat_ip = google_compute_address.opencti_static_ip.address
     }
@@ -111,9 +112,9 @@ resource "google_compute_instance" "vm_instance" {
 
 #Firewall Rules for Wazuh
 
-resource "google_compute_firewall" "wazuh_allow_ssh" {
-  name = "wazuh_allow_ssh"
-  network = "opencti-vpc"
+resource "google_compute_firewall" "wazuh-allow-ssh" {
+  name = "wazuh-allow-ssh"
+  network = google_compute_network.opencti-vpc.name
   
   allow {
     protocol = "tcp"
@@ -125,9 +126,9 @@ resource "google_compute_firewall" "wazuh_allow_ssh" {
 }
 
 
-resource "google_compute_firewall" "wazuh_allow_agents" {
-  name = "wazuh_allow_agents"
-  network = "opencti-vpc"
+resource "google_compute_firewall" "wazuh-allow-agents" {
+  name = "wazuh-allow-agents"
+  network = google_compute_network.opencti-vpc.name
   
   allow {
     protocol = "tcp"
@@ -139,9 +140,9 @@ resource "google_compute_firewall" "wazuh_allow_agents" {
   target_tags = ["wazuh"]
 }
 
-resource "google_compute_firewall" "wazuh_allow_https" {
-  name = "wazuh_allow_https"
-  network = "opencti-vpc"
+resource "google_compute_firewall" "wazuh-allow-https" {
+  name = "wazuh-allow-https"
+  network = google_compute_network.opencti-vpc.name
   
   allow {
     protocol = "tcp"
@@ -155,14 +156,14 @@ resource "google_compute_firewall" "wazuh_allow_https" {
 ######################################--------Wazuh--------######################################
 
 # Reserve a static external IP address for Wazuh
-resource "google_compute_address" "wazuh_static_ip" {
-  name   = "wazuh_static_ip"
+resource "google_compute_address" "wazuh-static-ip" {
+  name   = "wazuh-static-ip"
   region = var.region
 }
 
 # Wazuh Instance
-resource "google_compute_instance" "vm_instance" {
-  name         = "opencti-instance"
+resource "google_compute_instance" "wazuh-instance" {
+  name         = "wazuh-instance"
   machine_type = "e2-medium"
   zone         = var.zone
   project      = var.project_id
@@ -173,10 +174,10 @@ resource "google_compute_instance" "vm_instance" {
     }
   }
   network_interface {
-    network = google_compute_network.vpc_network.self_link
-    subnetwork = google_compute_subnetwork.subnet.self_link
+    network = google_compute_network.opencti-vpc.self_link
+    # subnetwork = google_compute_subnetwork.subnet.self_link
     access_config {
-      nat_ip = google_compute_address.wazuh_static_ip.address
+      nat_ip = google_compute_address.wazuh-static-ip.address
     }
   }
  tags = ["wazuh"]
@@ -185,9 +186,9 @@ resource "google_compute_instance" "vm_instance" {
 
 
 ######################################--------Bastion VPC--------######################################
-resource "google_compute_network" "bastion_vpc" {
-  name                    = "bastion_vpc"
-  auto_create_subnetworks = false
+resource "google_compute_network" "bastion-vpc" {
+  name                    = "bastion-vpc"
+  auto_create_subnetworks = true
 }
 
 # Create a subnet within the VPC network
@@ -199,22 +200,22 @@ resource "google_compute_network" "bastion_vpc" {
 # }
 
 # Firewall Rules
-resource "google_compute_firewall" "bastion_allow_wazuh" {
-    name = "bastion_allow_wazuh"
-    network = "bastion_vpc"
+resource "google_compute_firewall" "bastion-allow-wazuh" {
+    name = "bastion-allow-wazuh"
+    network = google_compute_network.bastion-vpc.name
 
     allow {
         protocol =  "tcp"
         ports = ["1514", "1515"]        
     }
 
-    source_ranges = [google_compute_instance.wazuh.network_interface.0.network_ip]  
+    source_ranges = [google_compute_instance.wazuh-instance.network_interface.0.network_ip]  
     target_tags = ["bastion"]
 }
 
-resource "google_compute_firewall" "bastion_allow_ssh" {
-  name = "bastion_allow_ssh"
-  network = "bastion_vpc"
+resource "google_compute_firewall" "bastion-allow-ssh" {
+  name = "bastion-allow-ssh"
+  network = google_compute_network.bastion-vpc.name
   
   allow {
     protocol = "tcp"
@@ -222,7 +223,7 @@ resource "google_compute_firewall" "bastion_allow_ssh" {
   }
 
   source_ranges = ["0.0.0.0/0"]
-  target_tags = "bastion"
+  target_tags = ["bastion"]
 }
 
 ######################################--------Bastion--------######################################
@@ -236,7 +237,7 @@ resource "google_compute_address" "bastion_static_ip" {
 resource "google_compute_instance" "bastion" {
     name = "bastion"
     machine_type = "e2-medium"
-    zone = "us-east1"
+    zone = var.zone
     
     boot_disk {
       initialize_params {
@@ -245,8 +246,8 @@ resource "google_compute_instance" "bastion" {
       }
     }
     network_interface {
-    network = google_compute_network.vpc_network.self_link
-    subnetwork = google_compute_subnetwork.subnet.self_link
+    network = google_compute_network.bastion-vpc.self_link
+    # subnetwork = google_compute_subnetwork.subnet.self_link
     access_config {
       nat_ip = google_compute_address.bastion_static_ip.address
     }

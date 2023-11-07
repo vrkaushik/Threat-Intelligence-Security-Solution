@@ -1,5 +1,6 @@
 variable "project_id" {
   description = "Google Cloud Project ID"
+  default = "capstone-stuxnet-2"
 }
 
 variable "region" {
