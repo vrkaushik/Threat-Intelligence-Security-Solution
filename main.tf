@@ -85,17 +85,17 @@ resource "google_compute_address" "opencti_static_ip" {
 }
 
 
-# Create a GCP instance within the specified subnet and with the reserved static IP
-# OpenCTI instance
-data "template_file" "startup_script" {
-  template = file("deps.sh")
-  # The wrapper script is used by each of the providers and each variable has to be filled out in order to run. Unfortunately, this means that if you change something in one provider, you have to change it in each of the others. It's not ideal, but FYI.
-  vars = {
-    "external_ip"=google_compute_address.opencti_static_ip.address
-    "docker_compose_file" = file("opencti/docker/docker-compose.yml")
-    "nginx_conf_file" = file("opencti/nginx/conf.d/default.conf")
-  }
-}
+# # Create a GCP instance within the specified subnet and with the reserved static IP
+# # OpenCTI instance
+# data "template_file" "startup_script" {
+#   template = file("deps.sh")
+#   # The wrapper script is used by each of the providers and each variable has to be filled out in order to run. Unfortunately, this means that if you change something in one provider, you have to change it in each of the others. It's not ideal, but FYI.
+#   vars = {
+#     "external_ip"="${google_compute_address.opencti_static_ip.address}"
+#     "docker_compose_file" = file("opencti/docker-compose.yml")
+#     "nginx_conf_file" = file("opencti/nginx/conf.d/default.conf")
+#   }
+# }
 
 
 
@@ -104,12 +104,14 @@ resource "google_compute_instance" "opencti-instance" {
   machine_type = "e2-highmem-4"
   zone         = var.zone
   project      = var.project_id
+
   boot_disk {
     initialize_params {
       image = "debian-11-bullseye-v20231004"
       size = 60
     }
   }
+
   network_interface {
     network = google_compute_network.opencti-vpc.self_link
     # subnetwork = google_compute_subnetwork.subnet.self_link
@@ -118,16 +120,43 @@ resource "google_compute_instance" "opencti-instance" {
     }
   }
 
-  
-metadata_startup_script = data.template_file.startup_script.rendered
+  metadata = {
+    ssh-keys = "admin:${file("id_ed25519.pub")}"
+  }
+
+  # metadata = {
+  #   startup-script = templatefile("deps.sh", {
+  #     //external_ip           = google_compute_address.opencti_static_ip.address,
+  #     docker_compose_file   = file("opencti/docker-compose.yml"),
+  #     nginx_conf_file       = file("opencti/nginx/conf.d/default.conf")
+  #   })
+  # }
+
+  connection {
+    type = "ssh"
+    host = google_compute_address.opencti_static_ip.address
+    user = "admin"
+    private_key = file("id_ed25519.key")
+  }
+
+  provisioner "file" {
+    destination = "/home/admin/deps.sh"
+    content = templatefile("deps.sh", {
+      //external_ip           = google_compute_address.opencti_static_ip.address,
+      docker_compose_file   = file("opencti/docker-compose.yml"),
+      nginx_conf_file       = file("opencti/nginx/conf.d/default.conf")
+    })
+  }
+
+  provisioner "remote-exec" {
+    inline = ["/bin/bash /home/admin/deps.sh"]
+  }
 
 # metadata_startup_script = <<-EOF
 #     #!/bin/bash
 #     touch hello.txt
-
-    
-    
 #   EOF
+
   tags = ["opencti"]
 }
 
@@ -286,7 +315,3 @@ resource "google_compute_instance" "bastion" {
 
     tags = ["bastion"]
 }
-
-
-
-
