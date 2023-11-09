@@ -1,7 +1,7 @@
 # Specify the provider and authentication details
 provider "google" {
-  credentials = file("gcp-cred2.json")
-  project = "capstone-stuxnet-2"
+  credentials = file("gcp-cred.json")
+  project = var.project_id
 }
 
 ######################################--------OpenCTI VPC--------######################################
@@ -39,10 +39,11 @@ resource "google_compute_firewall" "opencti-allow-ssh" {
   
   allow {
     protocol = "tcp"
-    ports = ["33333"]
+    ports = ["22"]
   }
 
-  source_ranges = [google_compute_instance.bastion.network_interface.0.network_ip]  
+  #source_ranges = [google_compute_instance.bastion.network_interface.0.network_ip]  
+  source_ranges = ["0.0.0.0/0"]
   target_tags = ["opencti"]
 }
 
@@ -86,6 +87,18 @@ resource "google_compute_address" "opencti_static_ip" {
 
 # Create a GCP instance within the specified subnet and with the reserved static IP
 # OpenCTI instance
+data "template_file" "startup_script" {
+  template = file("deps.sh")
+  # The wrapper script is used by each of the providers and each variable has to be filled out in order to run. Unfortunately, this means that if you change something in one provider, you have to change it in each of the others. It's not ideal, but FYI.
+  vars = {
+    "external_ip"=google_compute_address.opencti_static_ip.address
+    "docker_compose_file" = file("opencti/docker/docker-compose.yml")
+    "nginx_conf_file" = file("opencti/nginx/conf.d/default.conf")
+  }
+}
+
+
+
 resource "google_compute_instance" "opencti-instance" {
   name         = "opencti-instance"
   machine_type = "e2-highmem-4"
@@ -104,6 +117,17 @@ resource "google_compute_instance" "opencti-instance" {
       nat_ip = google_compute_address.opencti_static_ip.address
     }
   }
+
+  
+metadata_startup_script = data.template_file.startup_script.rendered
+
+# metadata_startup_script = <<-EOF
+#     #!/bin/bash
+#     touch hello.txt
+
+    
+    
+#   EOF
   tags = ["opencti"]
 }
 
@@ -118,7 +142,7 @@ resource "google_compute_firewall" "wazuh-allow-ssh" {
   
   allow {
     protocol = "tcp"
-    ports = ["33333"]
+    ports = ["22"]
   }
 
   source_ranges = [google_compute_instance.bastion.network_interface.0.network_ip]  
@@ -219,7 +243,7 @@ resource "google_compute_firewall" "bastion-allow-ssh" {
   
   allow {
     protocol = "tcp"
-    ports = ["33333"]
+    ports = ["22"]
   }
 
   source_ranges = ["0.0.0.0/0"]
@@ -252,6 +276,13 @@ resource "google_compute_instance" "bastion" {
       nat_ip = google_compute_address.bastion_static_ip.address
     }
   }
+  metadata_startup_script = <<-EOF
+    #!/bin/bash
+  
+    echo "${file(var.usergen_script_path)}" | bash
+  
+    
+  EOF
 
     tags = ["bastion"]
 }
