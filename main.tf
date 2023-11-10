@@ -30,6 +30,7 @@ resource "google_compute_firewall" "opencti-allow-wazuh" {
 
     #source_ranges = [google_compute_instance.wazuh.network_interface.0.network_ip]  
     source_tags = ["wazuh"]
+    #source_ranges = [google_compute_instance.wazuh.network_interface.0.network_ip]  
     target_tags = ["opencti"] 
 }
 
@@ -143,7 +144,8 @@ resource "google_compute_instance" "opencti" {
   provisioner "file" {
     destination = "/home/admin/deps.sh"
     content = templatefile("deps.sh", {
-      //external_ip           = google_compute_address.opencti_static_ip.address,
+      wazuh_external_ip     = google_compute_address.wazuh_static_ip.address,
+      wazuh_internal_ip = google_compute_instance.wazuh.network_interface.0.network_ip, 
       docker_compose_file   = file("opencti/docker-compose.yml"),
       nginx_conf_file       = file("opencti/nginx/conf.d/default.conf")
     })
@@ -173,6 +175,14 @@ resource "google_compute_instance" "opencti" {
   tags = ["opencti"]
 }
 
+# output "rendered_deps" {
+#   value = templatefile("deps.sh", {
+#       wazuh_external_ip     = google_compute_address.wazuh_static_ip.address,
+#       docker_compose_file   = file("opencti/docker-compose.yml"),
+#       nginx_conf_file       = file("opencti/nginx/conf.d/default.conf")
+#     })
+# }
+
 
 
 
@@ -187,7 +197,8 @@ resource "google_compute_firewall" "wazuh-allow-ssh" {
     ports = ["22"]
   }
 
-  source_ranges = [google_compute_instance.bastion.network_interface.0.network_ip]  
+  #source_ranges = [google_compute_instance.bastion.network_interface.0.network_ip]  
+  source_ranges =["0.0.0.0/0"]
   target_tags = ["wazuh"]
 }
 
@@ -201,7 +212,7 @@ resource "google_compute_firewall" "wazuh-allow-agents" {
     ports = ["1514","1515", "1516","9200","9300-9400","55000"]
   }
 
-  source_ranges = [google_compute_instance.bastion.network_interface.0.network_ip]  
+  source_ranges = [google_compute_instance.bastion.network_interface.0.access_config.0.nat_ip]  
   source_tags = ["opencti"]
   target_tags = ["wazuh"]
 }
@@ -222,7 +233,7 @@ resource "google_compute_firewall" "wazuh-allow-https" {
 ######################################--------Wazuh--------######################################
 
 # Reserve a static external IP address for Wazuh
-resource "google_compute_address" "wazuh-static-ip" {
+resource "google_compute_address" "wazuh_static_ip" {
   name   = "wazuh-static-ip"
   region = var.region
 }
@@ -243,9 +254,57 @@ resource "google_compute_instance" "wazuh" {
     network = google_compute_network.opencti-vpc.self_link
     # subnetwork = google_compute_subnetwork.subnet.self_link
     access_config {
-      nat_ip = google_compute_address.wazuh-static-ip.address
+      nat_ip = google_compute_address.wazuh_static_ip.address
     }
   }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file(var.public_key)}"
+  }
+
+  connection {
+    type = "ssh"
+    host = google_compute_address.wazuh_static_ip.address
+    user = "ubuntu"
+    # private_key = file("id_ed25519.key")
+    private_key = file(var.private_key)
+  }
+
+  provisioner "file" {
+    destination = "/home/ubuntu/wazuh-deps.sh"
+    source = "wazuh-deps.sh"
+    # content = templatefile("wazuh-deps.sh", {
+    #   //external_ip           = google_compute_address.opencti_static_ip.address,
+    #   docker_compose_file   = file("opencti/docker-compose.yml"),
+    #   nginx_conf_file       = file("opencti/nginx/conf.d/default.conf")
+    # })
+  }
+
+  provisioner "file" {
+    source = "users.txt"
+    destination = "/home/ubuntu/users.txt"
+  }
+
+  provisioner "file" {
+    source = "usergen.sh"
+    destination = "/home/ubuntu/usergen.sh"
+  }
+
+  provisioner "file" {
+    source = "wazuh/docker-compose.yml"
+    destination = "/home/ubuntu/docker-compose.yml"
+  }
+
+
+  provisioner "remote-exec" {
+    inline = ["/bin/bash /home/ubuntu/wazuh-deps.sh"]
+  }
+
+  provisioner "remote-exec" {
+    inline = ["/bin/bash /home/ubuntu/usergen.sh"]
+  }
+
+
  tags = ["wazuh"]
 }
 
@@ -275,7 +334,7 @@ resource "google_compute_firewall" "bastion-allow-wazuh" {
         ports = ["1514", "1515"]        
     }
 
-    source_ranges = [google_compute_instance.wazuh.network_interface.0.network_ip]  
+    source_ranges = [google_compute_instance.wazuh.network_interface.0.access_config.0.nat_ip]  
     target_tags = ["bastion"]
 }
 
@@ -318,13 +377,41 @@ resource "google_compute_instance" "bastion" {
       nat_ip = google_compute_address.bastion_static_ip.address
     }
   }
-  metadata_startup_script = <<-EOF
-    #!/bin/bash
   
-    echo "${file(var.usergen_script_path)}" | bash
-  
-    
-  EOF
+
+
+  metadata = {
+    ssh-keys = "admin:${file(var.public_key)}"
+  }
+
+  # metadata = {
+  #   startup-script = templatefile("deps.sh", {
+  #     //external_ip           = google_compute_address.opencti_static_ip.address,
+  #     docker_compose_file   = file("opencti/docker-compose.yml"),
+  #     nginx_conf_file       = file("opencti/nginx/conf.d/default.conf")
+  #   })
+  # }
+
+  connection {
+    type = "ssh"
+    host = google_compute_address.bastion_static_ip.address
+    user = "admin"
+    # private_key = file("id_ed25519.key")
+    private_key = file(var.private_key)
+  }
+
+  provisioner "file" {
+    destination = "/home/admin/bastion-deps.sh"
+    content = templatefile("bastion-deps.sh", {
+      wazuh_external_ip     = google_compute_address.wazuh_static_ip.address,
+      #bastion_internal_ip = google_compute_instance.bastion.network_interface.0.network_ip, 
+     })
+  }
+
+  provisioner "remote-exec" {
+    inline = ["/bin/bash /home/admin/bastion-deps.sh"]
+  }
+
 
     tags = ["bastion"]
 }

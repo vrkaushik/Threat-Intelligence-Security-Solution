@@ -29,13 +29,13 @@ sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Check if Docker and Docker Compose are installed
-if ! command -v docker >/dev/null 2>&1; then
-    echo "Docker is not installed. Please install Docker first."
+if ! command  docker -v >/dev/null 2>&1; then
+    echo "Docker is not installed on opencti. Please install Docker first."
     exit 1
 fi
 
-if ! command -v docker compose >/dev/null 2>&1; then
-    echo "Docker Compose is not installed. Please install Docker Compose first."
+if ! command docker compose -v >/dev/null 2>&1; then
+    echo "Docker Compose is not installed on opencti. Please install Docker Compose first."
     exit 1
 fi
 
@@ -83,3 +83,39 @@ sudo chmod 644 "$CERT_PATH"
 sudo cp /home/admin/default.conf /etc/nginx/conf.d/default.conf
 
 sudo systemctl restart nginx
+
+
+
+# Configuring Wazuh Agent
+
+# Install the GPG key:
+
+# sudo curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg --import && sudo chmod 644 /usr/share/keyrings/wazuh.gpg
+
+# # Add the repository:
+
+# sudo echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" | sudo tee -a /etc/apt/sources.list.d/wazuh.list
+
+# # Update the package information:
+
+# sudo apt-get update
+
+# #WAZUH_MANAGER = "${wazuh_external_ip}" 
+# # sudo export WAZUH_MANAGER="${wazuh_external_ip}"
+# # sudo echo 'export WAZUH_MANAGER="${wazuh_external_ip}"' >> ~/.bashrc
+
+# sudo WAZUH_MANAGER="${wazuh_external_ip}" apt-get install wazuh-agent
+
+# # Enable and start the Wazuh agent service.
+
+
+sudo wget https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.6.0-1_amd64.deb && sudo WAZUH_MANAGER='${wazuh_internal_ip}' WAZUH_AGENT_NAME='opencti' dpkg -i ./wazuh-agent_4.6.0-1_amd64.deb
+
+
+
+sudo systemctl daemon-reload
+sudo systemctl enable wazuh-agent
+sudo systemctl start wazuh-agent
+
+# The deployment process is now complete, and the Wazuh agent is successfully running on your Linux system.
+
