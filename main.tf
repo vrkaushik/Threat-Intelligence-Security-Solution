@@ -99,8 +99,8 @@ resource "google_compute_address" "opencti_static_ip" {
 
 
 
-resource "google_compute_instance" "opencti-instance" {
-  name         = "opencti-instance"
+resource "google_compute_instance" "opencti" {
+  name         = "opencti"
   machine_type = "e2-highmem-4"
   zone         = var.zone
   project      = var.project_id
@@ -121,7 +121,7 @@ resource "google_compute_instance" "opencti-instance" {
   }
 
   metadata = {
-    ssh-keys = "admin:${file("id_ed25519.pub")}"
+    ssh-keys = "admin:${file(var.public_key)}"
   }
 
   # metadata = {
@@ -136,7 +136,8 @@ resource "google_compute_instance" "opencti-instance" {
     type = "ssh"
     host = google_compute_address.opencti_static_ip.address
     user = "admin"
-    private_key = file("id_ed25519.key")
+    # private_key = file("id_ed25519.key")
+    private_key = file(var.private_key)
   }
 
   provisioner "file" {
@@ -146,6 +147,18 @@ resource "google_compute_instance" "opencti-instance" {
       docker_compose_file   = file("opencti/docker-compose.yml"),
       nginx_conf_file       = file("opencti/nginx/conf.d/default.conf")
     })
+  }
+
+  provisioner "file" {
+    source = "opencti/docker-compose.yml"
+    destination = "/home/admin/docker-compose.yml"
+    # content = templatefile("opencti/docker-compose.yml")
+  }
+
+  provisioner "file" {
+    source = "opencti/nginx/conf.d/default.conf"
+    destination = "/home/admin/default.conf"
+    # content = templatefile("opencti/nginx/conf.d/default.conf")
   }
 
   provisioner "remote-exec" {
@@ -215,8 +228,8 @@ resource "google_compute_address" "wazuh-static-ip" {
 }
 
 # Wazuh Instance
-resource "google_compute_instance" "wazuh-instance" {
-  name         = "wazuh-instance"
+resource "google_compute_instance" "wazuh" {
+  name         = "wazuh"
   machine_type = "e2-medium"
   zone         = var.zone
   project      = var.project_id
@@ -262,7 +275,7 @@ resource "google_compute_firewall" "bastion-allow-wazuh" {
         ports = ["1514", "1515"]        
     }
 
-    source_ranges = [google_compute_instance.wazuh-instance.network_interface.0.network_ip]  
+    source_ranges = [google_compute_instance.wazuh.network_interface.0.network_ip]  
     target_tags = ["bastion"]
 }
 
