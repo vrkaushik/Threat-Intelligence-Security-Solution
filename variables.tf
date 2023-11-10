@@ -17,6 +17,19 @@ variable "zone" {
 #   description = "First user at the time of creation"
 # }
 
+
+variable "private_key" {
+  description = "The path of private key for the new user being created"
+  type = string
+  default = "~/.ssh/id_ed25519"
+}
+
+variable "public_key" {
+  description = "The path of private key for the new user being created"
+  type = string
+  default = "~/.ssh/id_ed25519.pub"
+}
+
 variable "users_file" {
   description = "File path of the list of users and their corresponding public keys"
   default     = "users.txt"
