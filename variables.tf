@@ -17,7 +17,6 @@ variable "zone" {
 #   description = "First user at the time of creation"
 # }
 
-
 variable "private_key" {
   description = "The path of private key for the new user being created"
   type = string
@@ -50,8 +49,13 @@ variable "opencti_docker_compose_path" {
   default = "opencti/docker-compose.yml"
 }
 
-
 variable "opencti_nginx_conf_path"  {
   type = string
   default = "opencti/nginx/conf.d/default.yml"
+}
+
+variable "provisioned" {
+  description = "Set to true after all machines have been provisioned."
+  type        = bool
+  default     = false
 }

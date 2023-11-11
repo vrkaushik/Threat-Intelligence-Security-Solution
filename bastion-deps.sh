@@ -15,3 +15,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable wazuh-agent
 sudo systemctl start wazuh-agent
 
+# copy SSH config
+sudo mv /home/admin/sshd_config /etc/ssh/sshd_config
+sudo systemctl restart sshd

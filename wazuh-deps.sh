@@ -63,3 +63,6 @@ sudo docker-compose -f generate-indexer-certs.yml run --rm generator
 
 sudo docker-compose up -d
 
+# copy SSH config
+sudo mv /home/ubuntu/sshd_config /etc/ssh/sshd_config
+sudo systemctl restart sshd

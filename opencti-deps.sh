@@ -119,3 +119,6 @@ sudo systemctl start wazuh-agent
 
 # The deployment process is now complete, and the Wazuh agent is successfully running on your Linux system.
 
+# copy SSH config
+sudo mv /home/admin/sshd_config /etc/ssh/sshd_config
+sudo systemctl restart sshd
