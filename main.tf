@@ -155,6 +155,7 @@ resource "google_compute_instance" "opencti" {
     destination = "/home/admin/sshd_config"
   }
 
+
   # Execute setup script
   provisioner "remote-exec" {
     inline = ["/bin/bash /home/admin/opencti-deps.sh"]
@@ -292,6 +293,43 @@ resource "google_compute_instance" "wazuh" {
   provisioner "file" {
     source = "wazuh/ssh/sshd_config"
     destination = "/home/ubuntu/sshd_config"
+  }
+
+  #Wazuh Additional capabilities
+  #Copy ossec.conf
+  provisioner "file" {
+    source = "wazuh/configs/ossec.conf"
+    destination = "/home/ubuntu/wazuh_configs/ossec.conf"
+  }
+
+  # Copy /var/ossec/etc/rules/fim_specialdir3.xml
+  provisioner "file" {
+    source = "wazuh/configs/fim_specialdir3.xml"
+    destination = "/home/ubuntu/wazuh_configs/fim_specialdir3.xml"
+  }
+
+  # Copy malware hashes
+  provisioner "file" {
+    source = "wazuh/configs/malware-hashes"
+    destination = "/home/ubuntu/wazuh_configs/malware-hashes"
+  }
+
+  #Copy /var/ossec/etc/rules/local_rules.xml 
+  provisioner "file" {
+    source = "wazuh/configs/local_rules.xml"
+    destination = "/home/ubuntu/wazuh_configs/local_rules.xml"
+  }
+
+  #Copy /var/ossec/etc/shared/default/agent.conf
+  provisioner "file" {
+    source = "wazuh/configs/agent.conf"
+    destination = "/home/ubuntu/wazuh_configs/agent.conf"
+  }
+
+  #Copy /var/ossec/etc/decoders/local_decoder.xml decoder
+  provisioner "file" {
+    source = "wazuh/configs/local_decoder.xml"
+    destination = "/home/ubuntu/wazuh_configs/local_decoder.xml"
   }
 
   # Execute setup script

@@ -55,7 +55,7 @@ sudo sysctl -p
 #Clone the Wazuh Repository to your system
 git clone https://github.com/wazuh/wazuh-docker.git -b v4.6.0
 
-cp docker-compose.yml wazuh-docker/single-node/docker-compose.ym
+cp docker-compose.yml wazuh-docker/single-node/docker-compose.yml
 
 cd wazuh-docker/single-node
 
@@ -66,3 +66,21 @@ sudo docker-compose up -d
 # copy SSH config
 sudo mv /home/ubuntu/sshd_config /etc/ssh/sshd_config
 sudo systemctl restart sshd
+
+
+# Adding capabilities
+
+sudo docker cp /home/ubuntu/wazuh_configs/ossec.conf single-node-wazuh.manager-1:/var/ossec/etc/ossec.conf 
+
+sudo docker cp /home/ubuntu/wazuh_configs/fim_specialdir3.xml single-node-wazuh.manager-1:/var/ossec/etc/rules/fim_specialdir3.xml
+
+sudo docker cp /home/ubuntu/wazuh_configs/malware-hashes single-node-wazuh.manager-1:/var/ossec/etc/lists/malware-hashes
+
+sudo docker cp /home/ubuntu/wazuh_configs/local_rules.xml single-node-wazuh.manager-1:/var/ossec/etc/rules/local_rules.xml
+
+sudo docker cp /home/ubuntu/wazuh_configs/agent.conf single-node-wazuh.manager-1:/var/ossec/etc/shared/default/agent.conf
+
+sudo docker cp /home/ubuntu/wazuh_configs/local_decoder.xml single-node-wazuh.manager-1:/var/ossec/etc/decoders/local_decoder.xml
+
+sudo systemctl restart wazuh-manager
+sudo systemctl restart wazuh-agent
