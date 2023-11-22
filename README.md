@@ -29,7 +29,7 @@ This project requires some external setup:
 3. Select the service account > Keys > Add Key > Create New Key > JSON > Create. Rename the downloaded credentials to `gcp-cred.json` and move to the root of the project directory.
 4. Navigate to APIs & Services > Library. Search "Compute Engine API" and enable the API. This may take a few minutes.
 5.  Update the following variables in `variables.tf`:
-    - `projct_id`: the name of the project you created
+    - `project_id`: the name of the project you created
     - `private_key`: the path to the private key to provide SSH access to the project
     - `public_key`: the path to the public key to provide SSH access to the project
 6. Install [`Terraform`](https://developer.hashicorp.com/terraform/install) if not already installed.
