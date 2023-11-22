@@ -423,3 +423,15 @@ resource "google_compute_instance" "bastion" {
   
   tags = ["bastion"]
 }
+
+output "opencti-ip" {
+  value = google_compute_address.opencti_static_ip.address
+}
+
+output "wazuh-ip" {
+  value = google_compute_address.wazuh_static_ip.address
+}
+
+output "bastion-ip" {
+  value = google_compute_address.bastion_static_ip.address
+}
